@@ -1,1 +1,36 @@
+name: ig_etl_and_report
+on:
+  schedule:
+    # 毎日 06:00 JST に ETL
+    - cron: '0 21 * * *'     # UTC-9
+    # 毎週月曜 06:15 JST にレポート＆メール
+    - cron: '15 21 * * 0'
+  workflow_dispatch:         # 手動実行も可
 
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install -r requirements.txt
+      - run: python etl_instagram.py
+        env: { IG_USER_ID: ${{ secrets.IG_USER_ID }}, IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }},
+              IG_APP_ID: ${{ secrets.IG_APP_ID }}, IG_APP_SECRET: ${{ secrets.IG_APP_SECRET }},
+              GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_JSON }} }
+
+  report:
+    needs: etl
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install -r requirements.txt sendgrid
+      - run: python weekly_report.py
+        env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }},
+              GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_JSON }} }
+      - run: python send_mail.py
+        env: { SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }},
+              SEND_TO: ${{ secrets.SEND_TO }} }
