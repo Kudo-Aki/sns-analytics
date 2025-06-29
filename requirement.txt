@@ -1,1 +1,6 @@
-
+facebook_business
+google-cloud-bigquery
+openai
+python-dotenv
+sendgrid
+pandas
